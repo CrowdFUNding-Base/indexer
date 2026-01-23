@@ -16,22 +16,32 @@ app.use("/graphql", graphql({ db, schema }));
 // Custom REST Endpoints
 // ==========================================
 
-// Health check
-app.get("/health", (c) => {
-  return c.json({ 
-    status: "ok", 
-    timestamp: new Date().toISOString(),
-    message: "CrowdFUNding Indexer is running"
-  });
-});
-
 // Get all campaigns (simplified)
 app.get("/api/campaigns", async (c) => {
   try {
     const campaigns = await db.select().from(schema.campaigns);
-    return c.json({ success: true, data: campaigns, count: campaigns.length });
+    // Convert BigInt to string for JSON serialization
+    const serializedCampaigns = campaigns.map((campaign) => ({
+      ...campaign,
+      balance: campaign.balance.toString(),
+      targetAmount: campaign.targetAmount.toString(),
+      creationTime: campaign.creationTime.toString(),
+    }));
+    return c.json({
+      success: true,
+      data: serializedCampaigns,
+      count: campaigns.length,
+    });
   } catch (error) {
-    return c.json({ success: false, message: "Error fetching campaigns" }, 500);
+    console.error("Error fetching campaigns:", error);
+    return c.json(
+      {
+        success: false,
+        message: "Error fetching campaigns",
+        error: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    );
   }
 });
 
@@ -39,9 +49,28 @@ app.get("/api/campaigns", async (c) => {
 app.get("/api/donations", async (c) => {
   try {
     const donations = await db.select().from(schema.donations);
-    return c.json({ success: true, data: donations, count: donations.length });
+    // Convert BigInt to string for JSON serialization
+    const serializedDonations = donations.map((donation) => ({
+      ...donation,
+      amount: donation.amount.toString(),
+      blockNumber: donation.blockNumber.toString(),
+      timestamp: donation.timestamp.toString(),
+    }));
+    return c.json({
+      success: true,
+      data: serializedDonations,
+      count: donations.length,
+    });
   } catch (error) {
-    return c.json({ success: false, message: "Error fetching donations" }, 500);
+    console.error("Error fetching donations:", error);
+    return c.json(
+      {
+        success: false,
+        message: "Error fetching donations",
+        error: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    );
   }
 });
 
@@ -49,9 +78,27 @@ app.get("/api/donations", async (c) => {
 app.get("/api/badges", async (c) => {
   try {
     const badges = await db.select().from(schema.badges);
-    return c.json({ success: true, data: badges, count: badges.length });
+    // Convert BigInt to string for JSON serialization
+    const serializedBadges = badges.map((badge) => ({
+      ...badge,
+      blockNumber: badge.blockNumber.toString(),
+      timestamp: badge.timestamp.toString(),
+    }));
+    return c.json({
+      success: true,
+      data: serializedBadges,
+      count: badges.length,
+    });
   } catch (error) {
-    return c.json({ success: false, message: "Error fetching badges" }, 500);
+    console.error("Error fetching badges:", error);
+    return c.json(
+      {
+        success: false,
+        message: "Error fetching badges",
+        error: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    );
   }
 });
 
@@ -59,9 +106,28 @@ app.get("/api/badges", async (c) => {
 app.get("/api/withdrawals", async (c) => {
   try {
     const withdrawals = await db.select().from(schema.withdrawals);
-    return c.json({ success: true, data: withdrawals, count: withdrawals.length });
+    // Convert BigInt to string for JSON serialization
+    const serializedWithdrawals = withdrawals.map((withdrawal) => ({
+      ...withdrawal,
+      amount: withdrawal.amount.toString(),
+      blockNumber: withdrawal.blockNumber.toString(),
+      timestamp: withdrawal.timestamp.toString(),
+    }));
+    return c.json({
+      success: true,
+      data: serializedWithdrawals,
+      count: withdrawals.length,
+    });
   } catch (error) {
-    return c.json({ success: false, message: "Error fetching withdrawals" }, 500);
+    console.error("Error fetching withdrawals:", error);
+    return c.json(
+      {
+        success: false,
+        message: "Error fetching withdrawals",
+        error: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    );
   }
 });
 
@@ -90,7 +156,15 @@ app.get("/api/stats", async (c) => {
       },
     });
   } catch (error) {
-    return c.json({ success: false, message: "Error fetching stats" }, 500);
+    console.error("Error fetching stats:", error);
+    return c.json(
+      {
+        success: false,
+        message: "Error fetching stats",
+        error: error instanceof Error ? error.message : String(error),
+      },
+      500,
+    );
   }
 });
 
