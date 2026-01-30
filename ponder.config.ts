@@ -15,7 +15,7 @@ export default createConfig({
     Campaign: {
       abi: CampaignAbi,
       chain: "baseSepolia",
-      address: "0x669419298f071c321EF9B9cCA44be58E380A5fE3",
+      address: "0x44e87aa98d721Dbcf368690bF5aAb1F3dD944dA9",
       startBlock: 36692000,
     },
     Badge: {
