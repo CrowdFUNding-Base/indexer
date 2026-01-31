@@ -6,8 +6,8 @@ Blockchain indexer untuk CrowdFUNding platform menggunakan [Ponder](https://pond
 
 | Contract | Address (Base Sepolia) | Events |
 |----------|------------------------|--------|
-| Campaign | `0x669419298f071c321EF9B9cCA44be58E380A5fE3` | CampaignCreated, CampaignUpdated, DonationReceived, FundWithdrawn |
-| Badge | `0xdbe867Ddb16e0b34593f2Cef45e755feC2a8ce9d` | BadgeMinted, Transfer |
+| Campaign | `0x17fb0DD846d2299F525ca0d0402C607C580e80c8` | CampaignCreated, CampaignUpdated, DonationReceived, FundWithdrawn |
+| Badge | `0x8bdfD4C3f8e108687ABA5d9ebD9aFFe355545471` | BadgeMinted, Transfer |
 
 ## Setup
 
