@@ -1,78 +1,272 @@
-# CrowdFUNding Indexer (Ponder)
+# CrowdFUNding - Blockchain Indexer
 
-Blockchain indexer untuk CrowdFUNding platform menggunakan [Ponder](https://ponder.sh).
+<p align="center">
+  <img src="https://img.shields.io/badge/Node.js-18.0-green?logo=node.js" alt="Node.js Version"/>
+  <img src="https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript" alt="TypeScript"/>
+  <img src="https://img.shields.io/badge/Ponder-0.1-black?logo=ponder" alt="Ponder"/>
+  <img src="https://img.shields.io/badge/GraphQL-16.0-pink?logo=graphql" alt="GraphQL"/>
+  <img src="https://img.shields.io/badge/License-MIT-green" alt="License"/>
+</p>
 
-## Indexed Contracts
+## Table of Contents
 
-| Contract | Address (Base Sepolia) | Events |
-|----------|------------------------|--------|
-| Campaign | `0x17fb0DD846d2299F525ca0d0402C607C580e80c8` | CampaignCreated, CampaignUpdated, DonationReceived, FundWithdrawn |
-| Badge | `0x8bdfD4C3f8e108687ABA5d9ebD9aFFe355545471` | BadgeMinted, Transfer |
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Environment Setup](#environment-setup)
+- [Project Structure](#project-structure)
+- [Database Schema](#database-schema)
+- [API Endpoints](#api-endpoints)
+- [GraphQL Examples](#graphql-examples)
+- [Deployment](#deployment)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
 
-## Setup
+---
 
-### 1. Install Dependencies
+## Overview
 
-```bash
-cd indexer
-npm install
+The **CrowdFUNding Indexer** is a **Ponder** application that listens to blockchain events in real-time and makes the data queryable via GraphQL and REST APIs. It serves as the bridge between on-chain data and the backend cache.
+
+### Key Responsibilities
+
+- **Real-time Event Listening**: Subscribe to blockchain events (Base Sepolia)
+- **Data Indexing**: Process and store events in a queryable database
+- **API Generation**: Automatically serve GraphQL and REST APIs
+- **Synchronization**: Keep the backend cache synchronized with the blockchain state
+
+---
+
+## Architecture
+
+The indexer follows an event-driven architecture where blockchain events trigger handlers that update the local database.
+
+```mermaid
+flowchart TB
+    subgraph Blockchain["Base Sepolia"]
+        Campaign["Campaign.sol"]
+        Badge["Badge.sol"]
+    end
+
+    subgraph EventHandlers["Event Handlers"]
+        CampaignHandler["src/Campaign.ts"]
+        BadgeHandler["src/Badge.ts"]
+    end
+
+    subgraph Database["Database"]
+        Tables["Tables:\n- campaigns\n- donations\n- withdrawals\n- badges"]
+    end
+
+    subgraph APIs["API Layer"]
+        GraphQL["GraphQL Endpoint\n:42069/graphql"]
+        REST["REST Endpoints\n:42069/api/*"]
+    end
+
+    Campaign --> |"Events"| CampaignHandler
+    Badge --> |"Events"| BadgeHandler
+    CampaignHandler --> |"Insert/Update"| Tables
+    BadgeHandler --> |"Insert/Update"| Tables
+    Tables --> GraphQL
+    Tables --> REST
 ```
 
-### 2. Configure Environment
+### Key Architectural Decisions
 
-Edit `.env.local`:
+| Decision             | Implementation                   | Benefit                               |
+| -------------------- | -------------------------------- | ------------------------------------- |
+| **Ponder Framework** | TypeScript-based indexer         | Hot reload, type safety               |
+| **Event-Driven**     | Handler per event type           | Clear separation of concerns          |
+| **Dual API**         | GraphQL + REST                   | Flexibility for consumers             |
+| **Portable DB**      | SQLite (dev) / PostgreSQL (prod) | Easy development, scalable production |
 
-```bash
-# Base Sepolia RPC URL (use Alchemy/Infura for better performance)
+---
+
+## Tech Stack
+
+| Category      | Technology          | Description                    |
+| ------------- | ------------------- | ------------------------------ |
+| **Runtime**   | Node.js             | JavaScript runtime environment |
+| **Language**  | TypeScript          | Static typing for reliability  |
+| **Framework** | Ponder              | Blockchain indexing framework  |
+| **Database**  | SQLite / PostgreSQL | Data persistence               |
+| **API**       | GraphQL / REST      | Data query interfaces          |
+| **RPC**       | Viem / Alchemy      | Blockchain connection          |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+Ensure you have the following installed:
+
+- **Node.js**: v18.14 or higher
+- **Package Manager**: npm or pnpm (pnpm recommended)
+- **RPC Endpoint**: Alchemy or Infura (Base Sepolia)
+
+### Installation
+
+1. **Clone the repository**:
+
+   ```bash
+   git clone https://github.com/CrowdFUNding-Base/indexer.git
+   cd indexer
+   ```
+
+2. **Install dependencies**:
+
+   ```bash
+   pnpm install
+   # or
+   npm install
+   ```
+
+3. **Generate Types**:
+   Run codegen to generate TypeScript types from the schema:
+
+   ```bash
+   npm run codegen
+   ```
+
+4. **Start the Indexer**:
+   ```bash
+   npm run dev
+   ```
+
+The indexer will start at `http://localhost:42069`.
+
+---
+
+## Environment Setup
+
+Create a `.env.local` file in the project root:
+
+```env
+# ============================
+# Blockchain RPC
+# ============================
 PONDER_RPC_URL_1=https://sepolia.base.org
 
-# Optional: PostgreSQL database (uses SQLite by default)
-DATABASE_URL=
+# For better performance, use Alchemy:
+# PONDER_RPC_URL_1=https://base-sepolia.g.alchemy.com/v2/YOUR_API_KEY
+
+# ============================
+# Database (Optional for Production)
+# ============================
+# By default, Ponder uses SQLite for development
+# For production, configure PostgreSQL:
+# DATABASE_URL=postgresql://user:password@host:5432/ponder
 ```
 
-### 3. Run Indexer
+### How to Obtain RPC URL
 
-```bash
-# Development mode (with hot reload)
-npm run dev
+| Provider    | How to Obtain                                    |
+| ----------- | ------------------------------------------------ |
+| **Alchemy** | Alchemy Dashboard Create App Select Base Sepolia |
+| **Infura**  | Infura Dashboard Create Key Enable Base          |
+| **Public**  | `https://sepolia.base.org` (Rate-limited)        |
 
-# Production mode
-npm run start
+---
+
+## Project Structure
+
+```
+├── ponder.config.ts          # Ponder configuration
+├── ponder.schema.ts          # Database schema definition
+├── ponder-env.d.ts           # TypeScript declarations
+├── abis/
+│   ├── Campaign.json         # Campaign contract ABI
+│   └── Badge.json            # Badge contract ABI
+├── src/
+│   ├── Campaign.ts           # Campaign event handlers
+│   ├── Badge.ts              # Badge event handlers
+│   └── api/
+│       └── index.ts          # Custom REST endpoints
+├── tsconfig.json             # TypeScript configuration
+└── package.json              # Dependencies
 ```
 
-Indexer akan berjalan di `http://localhost:42069`
+---
+
+## Database Schema
+
+The indexer uses a relational schema mirroring the on-chain data:
+
+```mermaid
+erDiagram
+    CAMPAIGNS {
+        integer id PK
+        text name
+        text creatorName
+        hex owner
+        bigint balance
+        bigint targetAmount
+        bigint creationTime
+    }
+
+    DONATIONS {
+        text id PK "txHash-logIndex"
+        integer campaignId FK
+        hex donor
+        bigint amount
+        bigint blockNumber
+        bigint timestamp
+        hex transactionHash
+    }
+
+    WITHDRAWALS {
+        text id PK
+        integer campaignId FK
+        hex owner
+        bigint amount
+        bigint timestamp
+        hex transactionHash
+    }
+
+    BADGES {
+        integer tokenId PK
+        hex owner
+        text name
+        bigint timestamp
+        hex transactionHash
+    }
+
+    CAMPAIGNS ||--o{ DONATIONS : "receives"
+    CAMPAIGNS ||--o{ WITHDRAWALS : "has"
+```
+
+---
 
 ## API Endpoints
 
-### GraphQL
+The indexer provides both GraphQL and REST APIs.
 
-- `GET /` - GraphQL Playground
-- `POST /graphql` - GraphQL API
+### GraphQL Playground
 
-### REST API
+Access the interactive playground at `http://localhost:42069` to test queries.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Health check |
-| GET | `/api/campaigns` | Get all campaigns |
-| GET | `/api/campaigns/:id` | Get campaign by ID |
-| GET | `/api/campaigns/:id/donations` | Get donations for campaign |
-| GET | `/api/campaigns/:id/withdrawals` | Get withdrawals for campaign |
-| GET | `/api/donations/user/:address` | Get donations by user wallet |
-| GET | `/api/badges` | Get all badges |
-| GET | `/api/badges/user/:address` | Get badges by user wallet |
-| GET | `/api/stats` | Get platform statistics |
+### REST Endpoints
 
-### SQL Client
+| Method | Endpoint                       | Description        |
+| ------ | ------------------------------ | ------------------ |
+| GET    | `/health`                      | Health check       |
+| GET    | `/api/campaigns`               | List all campaigns |
+| GET    | `/api/campaigns/:id`           | Get campaign by ID |
+| GET    | `/api/donations`               | List all donations |
+| GET    | `/api/donations/user/:address` | User's donations   |
+| GET    | `/api/badges`                  | List all badges    |
+| GET    | `/api/badges/user/:address`    | User's badges      |
 
-- `GET /sql/*` - Direct SQL queries
+---
 
 ## GraphQL Examples
 
 ### Get All Campaigns
 
 ```graphql
-query {
+query GetCampaigns {
   campaigns(orderBy: "creationTime", orderDirection: "desc", first: 10) {
     items {
       id
@@ -83,87 +277,75 @@ query {
       targetAmount
       creationTime
     }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
   }
 }
 ```
 
-### Get Donations for Campaign
+### Get User's Donation History
 
 ```graphql
-query {
-  donations(where: { campaignId: 1 }, orderBy: "timestamp", orderDirection: "desc") {
+query GetUserDonations($donor: String!) {
+  donations(
+    where: { donor: $donor }
+    orderBy: "timestamp"
+    orderDirection: "desc"
+  ) {
     items {
       id
       campaignId
-      donor
       amount
       timestamp
-      transactionHash
+      campaign {
+        name
+        creatorName
+      }
     }
   }
 }
 ```
 
-### Get User's Badges
+---
 
-```graphql
-query {
-  badges(where: { owner: "0x..." }) {
-    items {
-      tokenId
-      owner
-      name
-      timestamp
-    }
-  }
-}
-```
+## Deployment
 
-## Database Schema
+### Railway
 
-### campaigns
-- `id` (int) - Campaign ID
-- `name` (text) - Campaign name
-- `creatorName` (text) - Creator name
-- `owner` (address) - Owner wallet address
-- `balance` (bigint) - Current balance in IDRX
-- `targetAmount` (bigint) - Target amount
-- `creationTime` (bigint) - Creation timestamp
+1.  Connect your GitHub repository
+2.  Set environment variables:
+    - `PONDER_RPC_URL_1`
+    - `DATABASE_URL` (if using PostgreSQL)
+3.  **Build Command**: `npm install && npm run build`
+4.  **Start Command**: `npm run start`
 
-### donations
-- `id` (text) - Unique ID (txHash-logIndex)
-- `campaignId` (int) - Campaign ID
-- `donor` (address) - Donor wallet address
-- `amount` (bigint) - Donation amount
-- `blockNumber` (bigint) - Block number
-- `timestamp` (bigint) - Timestamp
-- `transactionHash` (bytes32) - Transaction hash
+---
 
-### withdrawals
-- `id` (text) - Unique ID (txHash-logIndex)
-- `campaignId` (int) - Campaign ID
-- `name` (text) - Campaign name
-- `owner` (address) - Owner wallet address
-- `creatorName` (text) - Creator name
-- `amount` (bigint) - Withdrawal amount
-- `blockNumber` (bigint) - Block number
-- `timestamp` (bigint) - Timestamp
-- `transactionHash` (bytes32) - Transaction hash
+## Troubleshooting
 
-### badges
-- `tokenId` (int) - NFT Token ID
-- `owner` (address) - Current owner address
-- `name` (text) - Badge name
-- `blockNumber` (bigint) - Block number
-- `timestamp` (bigint) - Mint timestamp
-- `transactionHash` (bytes32) - Transaction hash
+| Issue                    | Solution                                                             |
+| ------------------------ | -------------------------------------------------------------------- |
+| **Indexer Not Starting** | Verify `PONDER_RPC_URL_1` is valid and accessible.                   |
+| **Missing Events**       | Ensure `startBlock` in config matches the contract deployment block. |
+| **Database Errors**      | Ensure write permissions in the project directory (for SQLite).      |
+| **GraphQL Errors**       | Run `npm run codegen` to regenerate types after schema changes.      |
 
-## Integration with Backend
+---
 
-Update backend `.env`:
+## Contributing
 
-```bash
-PONDER_URL=http://localhost:42069
-```
+Contributions are welcome. Please submit a Pull Request.
 
-Backend endpoints di `/crowdfunding/ponder/*` akan query data dari indexer ini.
+---
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+<p align="center">
+  Made with ❤️ by UGM BCC
+</p>
