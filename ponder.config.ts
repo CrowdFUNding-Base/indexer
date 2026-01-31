@@ -21,7 +21,7 @@ export default createConfig({
     Badge: {
       abi: BadgeAbi,
       chain: "baseSepolia",
-      address: "0x27EA9B34D708ff7646F92Dab287DfD43EbBA0d19",
+      address: "0xaE32Df9Fb677aE68C5A1F956761a42e269Ebdc99",
       startBlock: 36692000,
     },
   },
